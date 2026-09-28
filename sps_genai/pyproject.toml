@@ -8,7 +8,18 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "en-core-web-lg",
     "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "pydantic>=2.13.5",
+    "spacy>=3.8.16",
+    "uvicorn>=0.53.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+notebooks = [
     "ipykernel>=7.3.0",
     "jupyter>=1.1.1",
     "langchain-core>=1.6.3",
@@ -16,12 +27,9 @@ dependencies = [
     "matplotlib>=3.11.2",
     "numpy>=2.5.3",
     "openai>=3.14.0",
-    "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",
     "scikit-learn>=1.9.1",
     "scipy>=1.18.1",
-    "spacy>=3.8.16",
-    "uvicorn>=0.53.0",
 ]
 
 [project.scripts]
@@ -30,3 +38,12 @@ sps-genai = "sps_genai:main"
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv]
+default-groups = ["dev", "notebooks"]
+
+[tool.uv.sources]
+en-core-web-lg = { url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl" }
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

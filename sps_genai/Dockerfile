@@ -19,8 +19,8 @@ WORKDIR /code
 # Copy the pyproject.toml and uv.lock files
 COPY pyproject.toml uv.lock /code/
 
-# Install dependencies using uv
-RUN uv sync --frozen --no-install-project
+# Install only what the API needs (skip the notebook and dev groups)
+RUN uv sync --frozen --no-install-project --no-default-groups
 
 # Copy the application code
 COPY ./app /code/app
