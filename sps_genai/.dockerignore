@@ -1,0 +1,8 @@
+.venv
+.git
+.gitignore
+__pycache__
+**/__pycache__
+*.ipynb
+.python-version
+.DS_Store

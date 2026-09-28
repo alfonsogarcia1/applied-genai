@@ -1,0 +1,32 @@
+[project]
+name = "sps-genai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Alfonso Garcia", email = "317047014+alfonsogarcia1@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard-no-fastapi-cloud-cli]>=0.141.1",
+    "ipykernel>=7.3.0",
+    "jupyter>=1.1.1",
+    "langchain-core>=1.6.3",
+    "langgraph>=1.2.11",
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "openai>=3.14.0",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.18.1",
+    "spacy>=3.8.16",
+    "uvicorn>=0.53.0",
+]
+
+[project.scripts]
+sps-genai = "sps_genai:main"
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"

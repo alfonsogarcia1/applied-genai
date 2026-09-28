@@ -1,0 +1,10 @@
+.venv/
+.DS_Store
+__pycache__/
+.env
+.ipynb_checkpoints/
+
+# Class example notebooks and editor settings stay local
+*.ipynb
+.vscode/
+*.pdf
