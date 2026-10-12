@@ -22,8 +22,9 @@ COPY pyproject.toml uv.lock /code/
 # Install only what the API needs (skip the notebook and dev groups)
 RUN uv sync --frozen --no-install-project --no-default-groups
 
-# Copy the application code
+# Copy the application code (app/ includes the trained classifier weights)
 COPY ./app /code/app
+COPY ./helper_lib /code/helper_lib
 
 # Command to run the application
 CMD ["uv", "run", "--no-sync", "fastapi", "run", "app/main.py", "--port", "80"]

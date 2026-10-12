@@ -8,3 +8,10 @@ __pycache__/
 *.ipynb
 .vscode/
 *.pdf
+
+# Downloaded datasets and trained weights
+sps_genai/data/
+sps_genai/models/
+*.pth
+# ...except the trained classifier the API serves
+!sps_genai/app/weights/*.pth

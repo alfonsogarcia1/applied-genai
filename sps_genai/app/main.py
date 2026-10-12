@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from PIL import UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 from app.bigram_model import BigramModel
+from app.cnn_classifier import CNNClassifier
 from app.embedding_model import EmbeddingModel
 
 app = FastAPI()
@@ -17,6 +19,7 @@ It tells the story of Edmond Dantès, who is falsely imprisoned and later seeks 
 
 bigram_model = BigramModel(corpus)
 embedding_model = EmbeddingModel()
+cnn_classifier = CNNClassifier()
 
 
 class TextGenerationRequest(BaseModel):
@@ -63,3 +66,13 @@ def get_similarity(request: SimilarityRequest):
     check_known(request.word2)
     similarity = embedding_model.calculate_similarity(request.word1, request.word2)
     return {"word1": request.word1, "word2": request.word2, "similarity": similarity}
+
+
+@app.post("/classify")
+async def classify_image(file: UploadFile = File(...)):
+    image_bytes = await file.read()
+    try:
+        result = cnn_classifier.predict(image_bytes)
+    except UnidentifiedImageError:
+        raise HTTPException(status_code=400, detail="File is not an image")
+    return {"filename": file.filename, **result}
