@@ -46,6 +46,39 @@ def test_generate_still_works():
     assert response.json()["generated_text"].startswith("bigram")
 
 
+def test_rnn_generates_the_requested_number_of_words():
+    response = client.post("/generate_with_rnn", json={"start_word": "Monte", "length": 12})
+    assert response.status_code == 200
+    words = response.json()["generated_text"].split()
+    assert len(words) == 12
+    assert words[0] == "monte"
+
+
+def test_rnn_unknown_start_word():
+    response = client.post("/generate_with_rnn", json={"start_word": "qwzxvbn", "length": 5})
+    assert response.status_code == 404
+
+
+def test_rnn_rejects_bad_length():
+    for length in [0, 501]:
+        response = client.post("/generate_with_rnn", json={"start_word": "the", "length": length})
+        assert response.status_code == 422
+
+
+def test_gan_returns_a_png_grid_of_digits():
+    response = client.get("/generate_gan", params={"num_images": 4})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    image = Image.open(io.BytesIO(response.content))
+    # 4 digits of 28 x 28 in one row, with 2 pixels of padding around each
+    assert image.size == (4 * 30 + 2, 30 + 2)
+
+
+def test_gan_rejects_bad_num_images():
+    for n in [0, 65]:
+        assert client.get("/generate_gan", params={"num_images": n}).status_code == 422
+
+
 def make_png(color):
     image = Image.new("RGB", (100, 80), color)
     buffer = io.BytesIO()

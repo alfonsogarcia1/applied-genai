@@ -15,3 +15,7 @@ sps_genai/models/
 *.pth
 # ...except the trained classifier the API serves
 !sps_genai/app/weights/*.pth
+
+# Class slides and notebook exports
+*.pptx
+*.html
