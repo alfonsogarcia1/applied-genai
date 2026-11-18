@@ -30,11 +30,6 @@ http://localhost:8001/docs.
 | GET | `/generate_diffusion?num_images=16&diffusion_steps=20` | | a PNG grid of images from the diffusion model |
 | GET | `/generate_ebm?num_images=16&steps=256` | | a PNG grid of images from the energy-based model |
 
-`/embedding` and `/similarity` return 404 if a word isn't in the model's vocabulary.
-`/classify` returns 400 if the file isn't an image.
-`/generate_with_rnn` returns 404 if the start word isn't in the LSTM's vocabulary and 422
-if `length` isn't between 1 and 500.
-
 ```bash
 curl -X POST http://localhost:8001/embedding \
   -H "Content-Type: application/json" \
@@ -96,8 +91,7 @@ uv run python -m scripts.train_classifier
 | Conv2d 64 -> 128, kernel 4, stride 2, padding 1 + BatchNorm + LeakyReLU(0.2) | 128 x 7 x 7 |
 | Flatten, Linear | 1 (real/fake score) |
 
-It is trained on MNIST (scaled to [-1, 1] to match Tanh) with `BCEWithLogitsLoss`, which
-applies the sigmoid that turns the discriminator's score into a probability. Both networks
+It is trained on MNIST (scaled to [-1, 1] to match Tanh) with `BCEWithLogitsLoss`. Both networks
 use Adam (lr 0.0002, betas 0.5 and 0.999), batch size 128, 20 epochs. The weights are in
 `app/weights/gan_mnist.pth`. To train again (downloads MNIST into `data/` the first time):
 
@@ -144,10 +138,7 @@ looking images should get a low energy. It is four stride-2 conv layers and two 
 with the swish activation.
 
 To make an image, `langevin_sample` in `helper_lib/generator.py` starts from random noise and does
-gradient descent on the image instead of the weights. The weights are set to
-`requires_grad=False`, the image to `requires_grad=True`, and `torch.autograd.grad` gives the
-gradient of the energy with respect to the image. Each step adds a little noise and moves the
-image towards lower energy.
+gradient descent on the image instead of the weights, adding a little noise each step.
 
 `train_ebm` in `helper_lib/trainer.py` uses the loss from class: energy of real images minus
 energy of generated images, plus 0.1 times the squared energies. It keeps a buffer of past samples
