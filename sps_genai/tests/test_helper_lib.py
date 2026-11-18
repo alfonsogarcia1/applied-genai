@@ -14,10 +14,12 @@ from helper_lib.data_loader import (
     tokenize,
 )
 from helper_lib.evaluator import evaluate_model
-from helper_lib.generator import generate_samples, generate_text
+from helper_lib.generator import generate_samples, generate_text, langevin_sample
 from helper_lib.model import get_model
 from helper_lib.trainer import (
+    ebm_loss_function,
     train_diffusion,
+    train_ebm,
     train_gan,
     train_model,
     train_rnn_model,
@@ -190,6 +192,51 @@ def test_train_diffusion_updates_ema_and_generates(tmp_path):
     path = save_model(trained, str(tmp_path / "diffusion.pth"))
     loaded = load_model(get_model("Diffusion", image_size=32), path)
     assert torch.allclose(loaded.normalizer_mean.flatten(), torch.tensor([0.1, 0.2, 0.3]))
+
+
+
+def test_energy_model_gives_one_number_per_image():
+    model = get_model("EBM")
+    assert model(torch.rand(4, 3, 32, 32)).shape == (4, 1)
+
+
+def test_langevin_lowers_the_energy_and_leaves_weights_alone():
+    torch.manual_seed(0)
+    model = get_model("EBM")
+    start = torch.rand(8, 3, 32, 32) * 2 - 1
+    before = [p.clone() for p in model.parameters()]
+
+    # Run inside no_grad on purpose: the sampler must still get its image gradients
+    with torch.no_grad():
+        samples = langevin_sample(model, start, steps=20, step_size=10.0, noise_std=0.0)
+
+    with torch.no_grad():
+        assert model(samples).mean() < model(start).mean()
+    assert samples.min() >= -1 and samples.max() <= 1
+    assert not samples.requires_grad
+    # Sampling changes the images only: weights are untouched, no .grad left behind,
+    # and every weight is trainable again afterwards
+    for p, b in zip(model.parameters(), before):
+        assert torch.equal(p, b)
+        assert p.grad is None
+        assert p.requires_grad
+
+
+def test_ebm_loss_pushes_real_down_and_fake_up():
+    real, fake = torch.tensor([[-1.0], [-1.0]]), torch.tensor([[1.0], [1.0]])
+    # cdiv = -1 - 1 = -2, reg = 0.1 * (1 + 1) = 0.2
+    assert ebm_loss_function(real, fake).item() == pytest.approx(-1.8)
+
+
+def test_train_ebm_and_generate():
+    torch.manual_seed(0)
+    model = get_model("EBM")
+    loader = DataLoader(TensorDataset(torch.rand(16, 3, 32, 32) * 2 - 1, torch.zeros(16)), batch_size=8)
+    before = model.fc2.weight.clone()
+    optimizer = optim.Adam(model.parameters(), lr=1e-3, betas=(0.0, 0.999))
+    trained = train_ebm(model, loader, ebm_loss_function, optimizer, epochs=1, steps=3)
+    assert not torch.equal(trained.fc2.weight, before)
+    generate_samples(trained, "cpu", num_samples=2)
 
 
 def test_save_and_load(tmp_path):

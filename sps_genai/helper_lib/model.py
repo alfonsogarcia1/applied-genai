@@ -380,6 +380,34 @@ class DiffusionModel(nn.Module):
             return self.denormalize(self.reverse_diffusion(initial_noise, diffusion_steps))
 
 
+class EnergyModel(nn.Module):
+    # Energy-based model (Module 8 Practical): image -> one number, its "energy".
+    # Low energy means the image looks like the training data, high energy means it doesn't.
+    # Four stride-2 convs halve 32 x 32 -> 16 -> 8 -> 4 -> 2
+    def __init__(self, num_channels=3, image_size=32):
+        super().__init__()
+        self.num_channels = num_channels
+        self.image_size = image_size
+        self.conv1 = nn.Conv2d(num_channels, 16, kernel_size=5, stride=2, padding=2)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=2, padding=1)
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1)
+        self.conv4 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1)
+        self.flatten = nn.Flatten()
+        self.fc1 = nn.Linear(64 * (image_size // 16) ** 2, 64)
+        self.fc2 = nn.Linear(64, 1)
+
+    def forward(self, x):
+        # silu is the swish activation, x * sigmoid(x). It is smooth, which helps because
+        # Langevin sampling follows the gradient of this output with respect to the image
+        x = F.silu(self.conv1(x))
+        x = F.silu(self.conv2(x))
+        x = F.silu(self.conv3(x))
+        x = F.silu(self.conv4(x))
+        x = self.flatten(x)
+        x = F.silu(self.fc1(x))
+        return self.fc2(x)
+
+
 def get_model(model_name, **kwargs):
     # kwargs go to the model, e.g. get_model("LSTM", vocab_size=10000)
     if model_name == "FCNN":
@@ -398,6 +426,8 @@ def get_model(model_name, **kwargs):
         model = LSTMModel(**kwargs)
     elif model_name == "Diffusion":
         model = DiffusionModel(**kwargs)
+    elif model_name == "EBM":
+        model = EnergyModel(**kwargs)
     else:
         raise ValueError(f"Unknown model: {model_name}")
     return model

@@ -79,6 +79,38 @@ def test_gan_rejects_bad_num_images():
         assert client.get("/generate_gan", params={"num_images": n}).status_code == 422
 
 
+
+def check_png_grid(response, num_images, size):
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    image = Image.open(io.BytesIO(response.content))
+    # num_images in one row, with 2 pixels of padding around each
+    assert image.size == (num_images * (size + 2) + 2, size + 2 + 2)
+    assert image.mode == "RGB"
+
+
+def test_diffusion_returns_a_png_grid():
+    response = client.get("/generate_diffusion", params={"num_images": 3, "diffusion_steps": 5})
+    check_png_grid(response, 3, 32)
+
+
+def test_ebm_returns_a_png_grid():
+    response = client.get("/generate_ebm", params={"num_images": 3, "steps": 5})
+    check_png_grid(response, 3, 32)
+
+
+def test_image_generators_reject_bad_params():
+    for path, params in [
+        ("/generate_diffusion", {"num_images": 0}),
+        ("/generate_diffusion", {"num_images": 65}),
+        ("/generate_diffusion", {"diffusion_steps": 0}),
+        ("/generate_ebm", {"num_images": 65}),
+        ("/generate_ebm", {"steps": 0}),
+        ("/generate_ebm", {"steps": 1001}),
+    ]:
+        assert client.get(path, params=params).status_code == 422
+
+
 def make_png(color):
     image = Image.new("RGB", (100, 80), color)
     buffer = io.BytesIO()

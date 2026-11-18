@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 from app.bigram_model import BigramModel
 from app.cnn_classifier import CNNClassifier
+from app.diffusion_generator import DiffusionGenerator
+from app.ebm_generator import EBMGenerator
 from app.embedding_model import EmbeddingModel
 from app.gan_generator import GANGenerator
 from app.rnn_text_generator import RNNTextGenerator
@@ -24,6 +26,8 @@ embedding_model = EmbeddingModel()
 cnn_classifier = CNNClassifier()
 rnn_generator = RNNTextGenerator()
 gan_generator = GANGenerator()
+diffusion_generator = DiffusionGenerator()
+ebm_generator = EBMGenerator()
 
 MAX_RNN_LENGTH = 500
 
@@ -99,4 +103,26 @@ async def classify_image(file: UploadFile = File(...)):
 def generate_gan(num_images: int = Query(16, ge=1, le=64)):
     # New hand-written digits from the GAN trained on MNIST, as one PNG grid
     png = gan_generator.generate_png(num_images)
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/generate_diffusion", response_class=Response, responses={200: {"content": {"image/png": {}}}})
+def generate_diffusion(
+    num_images: int = Query(16, ge=1, le=64),
+    diffusion_steps: int = Query(20, ge=1, le=500),
+):
+    # New CIFAR10-like images from the diffusion model: start from pure noise and remove it
+    # a little at a time. 20 steps already looks about the same as 100, and is 5x faster
+    png = diffusion_generator.generate_png(num_images, diffusion_steps)
+    return Response(content=png, media_type="image/png")
+
+
+@app.get("/generate_ebm", response_class=Response, responses={200: {"content": {"image/png": {}}}})
+def generate_ebm(
+    num_images: int = Query(16, ge=1, le=64),
+    steps: int = Query(256, ge=1, le=1000),
+):
+    # New CIFAR10-like images from the energy-based model: start from random noise and run
+    # Langevin dynamics, nudging the pixels towards lower energy
+    png = ebm_generator.generate_png(num_images, steps)
     return Response(content=png, media_type="image/png")
